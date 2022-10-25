@@ -1,0 +1,4 @@
+﻿  1.cpp
+c:\users\koazy-0\source\repos\test1\test1\1.cpp(4): warning C4305: “初始化”: 从“double”到“float”截断
+c:\users\koazy-0\source\repos\test1\test1\1.cpp(5): warning C4305: “初始化”: 从“double”到“float”截断
+  test1.vcxproj -> C:\Users\koazy-0\source\repos\test1\Debug\test1.exe

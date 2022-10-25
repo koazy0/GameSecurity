@@ -1,0 +1,9 @@
+﻿  pch.cpp
+  dllmain.cpp
+    正在创建库 C:\Users\koazy-0\source\repos\1.4\test1\x64\Release\hook.lib 和对象 C:\Users\koazy-0\source\repos\1.4\test1\x64\Release\hook.exp
+  正在生成代码
+  151 of 155 functions (97.4%) were compiled, the rest were copied from previous compilation.
+    30 functions were new in current compilation
+    2 functions had inline decision re-evaluated but remain unchanged
+  已完成代码的生成
+  hook.vcxproj -> C:\Users\koazy-0\source\repos\1.4\test1\x64\Release\hook.dll
