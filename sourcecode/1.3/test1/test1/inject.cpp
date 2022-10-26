@@ -13,9 +13,9 @@ HHOOK keyborad_hook = NULL;
 int main() {
 	//InjectByCreateRemoteThread();
 	//InjectByApc();
-	if (!InjectByHook()) {
+	/*if (!InjectByHook()) {
 		MessageBox(NULL, "Error", "HookError", MB_OK);
-	};
+	};*/
 	system("pause");
 	return 0;
 }
