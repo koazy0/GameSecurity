@@ -32,6 +32,71 @@
 
 ​		这个我还没写，等到后面补上吧~
 
+##### 1.3.5 IAT_hook
+
+​		参考书籍：《逆向工程核心原理》
+
+​		以win7下的calc.exe为例(该程序为32位程序)，进行IAT hook。
+
+**基础知识:PE文件结构**
+
+​		`IMAGE_IMPORT_DESCRIPTOR`的结构如下所示：
+
+~~~c
+typedef struct _IMAGE_IMPORT_DESCRIPTOR {
+    union {
+        DWORD   Characteristics;            // 0 for terminating null import descriptor
+        DWORD   OriginalFirstThunk;         // RVA to original unbound IAT (PIMAGE_THUNK_DATA)
+    } DUMMYUNIONNAME;
+    DWORD   TimeDateStamp;                  // 0 if not bound,
+                                            // -1 if bound, and real date\time stamp
+                                            //     in IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT (new BIND)
+                                            // O.W. date/time stamp of DLL bound to (Old BIND)
+
+    DWORD   ForwarderChain;                 // -1 if no forwarders
+    DWORD   Name;							//RVA of Dll name
+    DWORD   FirstThunk;                     // RVA to IAT (if bound this IAT has actual addresses)
+}
+~~~
+
+以user32为例举例，
+
+![image-20221027160543921](pic\image-20221027160543921.png)
+
+第一项为指向函数名表的rva，找到对应RVA，可得到如下截图，即
+
+![image-20221027160910743](pic\image-20221027160910743.png)
+
+查看4AD6C的内容，发现是Word(fun)+Name(proc)的形式(这里截图省略)；
+
+对于最后一项FIRST_CHUNK_RVA，就是指向IAT表的地址![image-20221027161353214](pic\image-20221027161353214.png)
+
+**hook步骤**
+
+1.  `HANDLE Hmod=GetModuleHandle(NULL);	//获取当前基址`
+
+2. 	找寻IDT所在地址，得到加载的dll的信息
+~~~
+   DWORD pAddr=HMOD+Hmod[0x3C];	//NT header
+   pAddr=pAddr+0x80;				//VA of Import table in Data Directories
+   pAddr+=(DWORD)*pAddr;			//VA of Import Directory Table
+~~~
+
+3.  遍历IDT，通过对比Name从而找到目标Dll
+
+4.  同时记录ImportNameTable和对应的IAT基址
+
+5.  通过对比ImportName的name(fun)来确定偏移地址，同时定位IAT对应函数的offset
+
+   > - 可以通过地址自增实现
+   > - name(fun)是 const char[]，与程序编码选择(ANSI/Unicode)无关
+
+**注意事项**
+
+​		当使用PEView查看时，应使用RVA而不是file offset查看偏移，否则得到的结果不对。File offset是文件中的offset,RVA是加载到进程空间后的offset，这两点不一样，故这里指出。
+
+![image-20221027155109522](pic\image-20221027155109522.png)
+
 #### 1.4 内存检测与拷贝
 
 ### Chapter 2 
