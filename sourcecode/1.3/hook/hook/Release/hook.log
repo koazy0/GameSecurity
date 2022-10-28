@@ -1,0 +1,7 @@
+﻿  pch.cpp
+  dllmain.cpp
+    正在创建库 C:\Users\koazy-0\Desktop\游戏安全\GameSecurity-main\sourcecode\1.3\test1\Release\hook.lib 和对象 C:\Users\koazy-0\Desktop\游戏安全\GameSecurity-main\sourcecode\1.3\test1\Release\hook.exp
+  正在生成代码
+  All 154 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  已完成代码的生成
+  hook.vcxproj -> C:\Users\koazy-0\Desktop\游戏安全\GameSecurity-main\sourcecode\1.3\test1\Release\hook.dll

@@ -8,6 +8,7 @@
 
 #define FILE "clock.exe"
 #define DLL	 "my.dll"
+#define DLL_IAT	 "hook_iat.dll"
 #ifndef WORK 
 #define WORK 1 
 

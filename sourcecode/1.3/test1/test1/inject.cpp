@@ -3,7 +3,7 @@
 
 //根据进程名获取handle
 
-char file[] = "scanf.exe";
+char file[] = "calc.exe";
 //根据进程名获取pid
 
 CString strTmp;
@@ -11,7 +11,7 @@ DWORD pid;
 HHOOK keyborad_hook = NULL;
 
 int main() {
-	//InjectByCreateRemoteThread();
+	InjectByCreateRemoteThread();
 	//InjectByApc();
 	/*if (!InjectByHook()) {
 		MessageBox(NULL, "Error", "HookError", MB_OK);
@@ -24,20 +24,22 @@ BOOL InjectByCreateRemoteThread() {
 	//初始化结构_SECURITY_ATTRIBUTES
 	_SECURITY_ATTRIBUTES security_attributes = { sizeof(_SECURITY_ATTRIBUTES),NULL,FALSE };
 	HANDLE target = GetHandleFromName(file);
-
-	LPVOID writemem = VirtualAllocEx(target, NULL, sizeof(DLL), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-	WriteProcessMemory(target, writemem, DLL, sizeof(DLL), 0);
+	std::cout << target <<std::endl;
+	LPVOID writemem = VirtualAllocEx(target, NULL, sizeof(DLL_IAT), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	//std::cout << WriteProcessMemory(target, writemem, DLL_IAT, sizeof(DLL_IAT), 0) << std::endl;
+	WriteProcessMemory(target, writemem, DLL_IAT, sizeof(DLL_IAT), 0);
 
 	DWORD tid;
 	HANDLE re = CreateRemoteThread(
 		target,
 		&security_attributes,
 		0,
-		(LPTHREAD_START_ROUTINE)LoadLibrary,
+		(LPTHREAD_START_ROUTINE)LoadLibraryA,
 		writemem,
 		0,
 		&tid
 	);
+	WaitForSingleObject(re,INFINITE);
 	return TRUE;
 }
 
@@ -46,8 +48,8 @@ BOOL InjectByApc() {
 	std::vector<DWORD>tids;
 
 	//写入参数
-	auto writemem = VirtualAllocEx(target, NULL, sizeof(DLL), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-	WriteProcessMemory(target, writemem, DLL, sizeof(DLL), 0);
+	auto writemem = VirtualAllocEx(target, NULL, sizeof(DLL_IAT), MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	WriteProcessMemory(target, writemem, DLL_IAT, sizeof(DLL_IAT), 0);
 
 	//打开线程，进行apc插队
 	HANDLE thread;
@@ -65,7 +67,7 @@ BOOL InjectByApc() {
 
 	//以下两种释放方式等价
 	VirtualFreeEx(target, writemem, 0, MEM_RELEASE);
-	//VirtualFreeEx(target, writemem, sizeof(DLL), MEM_DECOMMIT);
+	//VirtualFreeEx(target, writemem, sizeof(DLL_IAT), MEM_DECOMMIT);
 
 	return TRUE;
 }
@@ -165,7 +167,7 @@ BOOL UnloadModule(HANDLE Filehandle, LPCSTR Dllname) {
 	MODULEENTRY32 me = {sizeof(MODULEENTRY32)};
 	
 	while (Module32Next(hsnapshot, &me)) {
-		if (!strcmp(me.szModule, DLL)) {
+		if (!strcmp(me.szModule, DLL_IAT)) {
 			HANDLE target_handle = me.hModule;
 			std::cout << me.szModule << std::endl;
 			break;
@@ -174,7 +176,7 @@ BOOL UnloadModule(HANDLE Filehandle, LPCSTR Dllname) {
 	}
 	//HANDLE hThread=CreateRemoteThread(Filehandle, NULL, 0, (LPTHREAD_START_ROUTINE)FreeLibrary, &me.szModule, 0, NULL);
 	/*HANDLE hThread= CreateRemoteThread(Filehandle, NULL, 0,
-		(LPTHREAD_START_ROUTINE)GetModuleHandleA, (LPVOID)&DLL, 0, 0);
+		(LPTHREAD_START_ROUTINE)GetModuleHandleA, (LPVOID)&DLL_IAT, 0, 0);
 	if(!hThread)
 		std::cout <<GetLastError()<< std::endl;
 	

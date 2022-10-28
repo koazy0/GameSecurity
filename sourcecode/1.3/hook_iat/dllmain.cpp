@@ -1,83 +1,95 @@
-﻿// dllmain.cpp : 定义 DLL 应用程序的入口点。
-#include "pch.h"
+﻿#include "pch.h"
 #include<Windows.h>
+#include<iostream>
 #include<atlstr.h>
 
-
-FARPROC TargetFun;
+LPCTSTR TargetDll = "USER32.dll";
+typedef BOOL(WINAPI *TargetFun)(_In_ HWND hWnd, _In_opt_ LPCTSTR lpString);
+TargetFun TargetProc;
 CString strTmp;
 
-BOOL HookIat(LPCTSTR szDllname,FARPROC Target, FARPROC HookFun){
+
+using namespace std;
+
+BOOL HookIat(LPCTSTR szDllname, FARPROC Target, FARPROC HookFun) {
 	HMODULE hMod;
 	LPCTSTR szLibName;
-	PIMAGE_IMPORT_DESCRIPTOR pIDT;
+	PIMAGE_IMPORT_DESCRIPTOR pImage;
 	PIMAGE_THUNK_DATA pThunk;
-	DWORD dwOldProtect, dwRVA;
+	DWORD dwOldProtect, dwOldProtect1, dwRVA;
 	PBYTE pAddr;
 
 	hMod = GetModuleHandle(NULL);
-	pAddr = (PBYTE) hMod;
+	cout << "hMod:"<<hMod << endl;
+	pAddr = (PBYTE)hMod;
 
-	pAddr += *((DWORD*)&pAddr[0x3C]);		//+offset(NT_Header)
-	dwRVA = *((DWORD*)&pAddr[0x80]);		//+offset(IDT)
+	pAddr += *((DWORD*)&pAddr[0x3C]);	//+offset(NT_Header)
+	dwRVA = *((DWORD*)&pAddr[0x80]);	//+offset(IDT)
 
-	pIDT = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD)hMod + dwRVA);	//VA of Import Directory Table
+	pImage = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD)hMod + dwRVA);	//VA of Import Directory Table
 
-	
-	//在PE结构中，一张线性表结构总是以NULL结尾
-	for (; pIDT->Name; pIDT++) {
-
-		//hMod为模块基址，寻找目标DLL的IDT
-		szLibName = (LPCTSTR)((DWORD)hMod + pIDT->Name);
+	for (; pImage->Name; pImage++) {
+		szLibName = (LPCTSTR)((DWORD)hMod + pImage->Name);
 		if (!StrCmp(szLibName, szDllname)) {
-			pThunk = (PIMAGE_THUNK_DATA)((DWORD)hMod + pIDT->FirstThunk);
+			pThunk = (PIMAGE_THUNK_DATA)((DWORD)hMod + pImage->FirstThunk);
 			for (; pThunk->u1.Function; pThunk++) {
 				if (pThunk->u1.Function == (DWORD)Target) {
-					VirtualProtect((LPVOID)pThunk->u1.Function, 4, PAGE_EXECUTE_READWRITE, &dwOldProtect);	//修改内存属性
+					VirtualProtect((LPVOID)pThunk, 4, PAGE_EXECUTE_WRITECOPY, &dwOldProtect1);				//修改内存属性
+					VirtualProtect((LPVOID)pThunk->u1.Function, 4, PAGE_EXECUTE_WRITECOPY, &dwOldProtect);	//修改内存属性
 					pThunk->u1.Function = (DWORD)HookFun;
 					VirtualProtect((LPVOID)pThunk->u1.Function, 4, dwOldProtect, &dwOldProtect);			//恢复内存属性
+					VirtualProtect((LPVOID)pThunk, 4, dwOldProtect1, &dwOldProtect1);			//恢复内存属性
 					return TRUE;
 				}
 			}
 		}
 	}
-	
+
 	return FALSE;
 }
 
-BOOL APIENTRY DllMain( HMODULE hModule,
-                       DWORD  ul_reason_for_call,
-                       LPVOID lpReserved
-                     )
-{
-	LPCTSTR TargetDll = "USER32.dll";
-	HMODULE hDll = GetModuleHandle(TargetDll);
-	
-    switch (ul_reason_for_call)
-    {
-    case DLL_PROCESS_ATTACH:
-		
-		if (!hDll) {
-			strTmp.Format("GetModuleHandle Error:%c ",GetLastError());
-			MessageBox(NULL, strTmp, "Error", MB_OK);
-		}
-		TargetFun =GetProcAddress(hDll, "SetWindowTextW");//保存函数地址
-		if (!TargetFun) {
-			strTmp.Format("GetProcAddress Error:%c ", GetLastError());
-			MessageBox(NULL, strTmp, "Error", MB_OK);
-		}
-
-		HookIat(TargetDll,TargetFun, TargetFun);//进行IAT hook
-		break;
-
-    case DLL_THREAD_ATTACH:
-		break;
-    case DLL_THREAD_DETACH:
-		break;
-    case DLL_PROCESS_DETACH:
-		HookIat(TargetDll, TargetFun, TargetFun);//取消IAT hook
-        break;
-    }
-    return TRUE;
+BOOL WINAPI hello(HWND hWnd, LPCTSTR lpString) {
+	DWORD dwOldProtect1;
+	cout << "hello world!\n";
+	MessageBox(NULL, "hello world!", "Hello", MB_OK);
+	MessageBox(NULL, lpString, "SetWindowText:lpString", MB_OK);
+	VirtualProtect((LPVOID)TargetProc, 0x400, PAGE_EXECUTE_READWRITE, &dwOldProtect1);
+	return TargetProc(hWnd, lpString);
 }
 
+BOOL WINAPI DllMain(HINSTANCE hinstDll, HMODULE hModule,
+	DWORD  ul_reason_for_call,
+	LPVOID lpReserved
+)
+{
+	BOOL result;
+	HMODULE hDll = GetModuleHandleA(TargetDll);
+	cout<<"123"<<endl;
+	if (!hDll) {
+		strTmp.Format("GetModuleHandle Error:%c ", GetLastError());
+		MessageBox(NULL, strTmp, "Error", MB_OK);
+	}
+	TargetProc = (TargetFun)GetProcAddress(hDll, "SetWindowTextW");//保存函数地址
+	if (!TargetProc) {
+		strTmp.Format("GetProcAddress Error:%c ", GetLastError());
+		MessageBox(NULL, strTmp, "Error", MB_OK);
+	}
+	MessageBox(NULL, "DLL_Loaded!", "Hooked", MB_OK);
+	switch (ul_reason_for_call)
+	{
+	case DLL_PROCESS_ATTACH:
+		MessageBox(NULL, "DLL_PROCESS_ATTACH!", "Hooked", MB_OK);
+		MessageBox(NULL, "DLL_PROCESS_ATTACH!", "Hooked", MB_OK);
+		result = HookIat(TargetDll, (FARPROC)hello, (FARPROC)TargetProc);
+		cout << "result of unhook" << result << endl;
+		break;
+	case DLL_THREAD_ATTACH:
+	case DLL_THREAD_DETACH:
+		break;
+	case DLL_PROCESS_DETACH:
+		 result = HookIat(TargetDll, (FARPROC)TargetProc, (FARPROC)hello);
+		cout << "result of unhook"<<result << endl;
+		break;
+	}
+	return TRUE;
+}
