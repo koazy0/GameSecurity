@@ -50,21 +50,19 @@ BOOL HookIat(LPCTSTR szDllname, FARPROC Target, FARPROC HookFun) {
 
 BOOL WINAPI hello(HWND hWnd, LPCTSTR lpString) {
 	DWORD dwOldProtect1;
-	cout << "hello world!\n";
 	MessageBox(NULL, "hello world!", "Hello", MB_OK);
 	MessageBox(NULL, lpString, "SetWindowText:lpString", MB_OK);
 	VirtualProtect((LPVOID)TargetProc, 0x400, PAGE_EXECUTE_READWRITE, &dwOldProtect1);
 	return TargetProc(hWnd, lpString);
 }
 
-BOOL WINAPI DllMain(HINSTANCE hinstDll, HMODULE hModule,
+BOOL WINAPI DllMain(HINSTANCE hinstDll,
 	DWORD  ul_reason_for_call,
 	LPVOID lpReserved
 )
 {
 	BOOL result;
 	HMODULE hDll = GetModuleHandleA(TargetDll);
-	cout<<"123"<<endl;
 	if (!hDll) {
 		strTmp.Format("GetModuleHandle Error:%c ", GetLastError());
 		MessageBox(NULL, strTmp, "Error", MB_OK);
@@ -74,21 +72,27 @@ BOOL WINAPI DllMain(HINSTANCE hinstDll, HMODULE hModule,
 		strTmp.Format("GetProcAddress Error:%c ", GetLastError());
 		MessageBox(NULL, strTmp, "Error", MB_OK);
 	}
-	MessageBox(NULL, "DLL_Loaded!", "Hooked", MB_OK);
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
 		MessageBox(NULL, "DLL_PROCESS_ATTACH!", "Hooked", MB_OK);
-		MessageBox(NULL, "DLL_PROCESS_ATTACH!", "Hooked", MB_OK);
-		result = HookIat(TargetDll, (FARPROC)hello, (FARPROC)TargetProc);
-		cout << "result of unhook" << result << endl;
+		
+		result = HookIat(TargetDll, (FARPROC)TargetProc,(FARPROC)hello );
+		
+		if(result)
+		MessageBox(NULL, "IAT Hook Success", "HookIat", MB_OK);
 		break;
 	case DLL_THREAD_ATTACH:
 	case DLL_THREAD_DETACH:
+		MessageBox(NULL, "DLL_THREAD", "Hooked", MB_OK);
 		break;
 	case DLL_PROCESS_DETACH:
-		 result = HookIat(TargetDll, (FARPROC)TargetProc, (FARPROC)hello);
-		cout << "result of unhook"<<result << endl;
+		MessageBox(NULL, "DLL_PROCESS_DETACH!", "Hooked", MB_OK);
+		 result = HookIat(TargetDll,  (FARPROC)hello,(FARPROC)TargetProc);
+
+		 if (result)
+		 MessageBox(NULL, "IAT Hook Ended", "HookIat", MB_OK);
+
 		break;
 	}
 	return TRUE;

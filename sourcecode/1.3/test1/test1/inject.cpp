@@ -39,7 +39,6 @@ BOOL InjectByCreateRemoteThread() {
 		0,
 		&tid
 	);
-	WaitForSingleObject(re,INFINITE);
 	return TRUE;
 }
 

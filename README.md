@@ -91,13 +91,31 @@ typedef struct _IMAGE_IMPORT_DESCRIPTOR {
    > - 可以通过地址自增实现
    > - name(fun)是 const char[]，与程序编码选择(ANSI/Unicode)无关
 
+
+
+**具体代码**
+
+IAT_Hook.cpp 是自我Hook，目标函数为SetWindowTextW;
+
+工程中的是通过注入dll的方式，实现对win7下32位calc.exe进行IAT hook。
+
+
+
+
+
 **注意事项**
 
-​		当使用PEView查看时，应使用RVA而不是file offset查看偏移，否则得到的结果不对。File offset是文件中的offset,RVA是加载到进程空间后的offset，这两点不一样，故这里指出。
+​		1.当使用PEView查看时，应使用RVA而不是file offset查看偏移，否则得到的结果不对。File offset是文件中的offset,RVA是加载到进程空间后的offset，这两点不一样，故这里指出。
 
 ![image-20221027155109522](pic\image-20221027155109522.png)
 
+​		2.另外，注入dll的时候可以用Messagebox来验证是否注入成功；如果没注入成功，没有实行msgbox的话，可以通过IDA查看，如果看到ida是有`DisableThreadLibraryCalls()`则说明入口函数有问题。
+
+
+
 #### 1.4 内存检测与拷贝
+
+​		
 
 ### Chapter 2 
 
